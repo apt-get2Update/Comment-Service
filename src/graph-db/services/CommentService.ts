@@ -32,7 +32,7 @@ async function updateCommet(text: string, id: number) {
 async function deleteCommet(id: number) {
     let queryString = `MATCH (cmd:COMMENT)
     WHERE ID(cmd) = ${id}
-    DELETE cmd`;
+    DETACH DELETE cmd`;
     try {
         return graphDB.query(queryString);    
     } catch (error) {

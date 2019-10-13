@@ -5,56 +5,82 @@ import commentService from "../../graph-db/services/CommentService"
 import {Comment,Replies} from "../../type/types"
 
 export async function createComment(handler: RequestHandler) {
-  const body = handler.getBody();
-  const {text,replyTo,user}=body;
-  const data: Comment = {userId: user.id,userName: user.name,text: text}
-  if(replyTo){
-    data["replyTo"] = replyTo;
+  try {
+    const body = handler.getBody();
+    const { text, replyTo, user } = body;
+    const data: Comment = { userId: user.id, userName: user.name, text: text }
+    if (replyTo) {
+      data["replyTo"] = replyTo;
+    }
+    const comment = await commentService.saveCommet(data);
+    return handler.sendResponse({ comment });  
+  } catch (error) {
+    return handler.sendServerError(error); 
   }
-  const comment = await commentService.saveCommet(data);
-  return handler.sendResponse({ comment});
+  
 }
 
 export async function updateComment(handler:RequestHandler){
-  const body = handler.getBody();
-  const { user,text } = body;
-  const commentId: number = handler.getRequestParameter("id");
-  const comment: any = await commentService.getCommet(commentId);
-  const cmd = constructSingleComment(comment)
-  if (cmd.usetId !== user.id) {
-    return handler.sendNotFoundResponse({ message: "Invalid User" });
+  try {
+    const body = handler.getBody();
+    const { user, text } = body;
+    const commentId: number = handler.getRequestParameter("id");
+    const comment: any = await commentService.getCommet(commentId);
+    const cmd = constructSingleComment(comment)
+    if (cmd.userId !== user.id) {
+      return handler.sendNotFoundResponse({ message: "Invalid User" });
+    }
+    await commentService.updateCommet(text, commentId);
+    return handler.sendResponse({ commentId });  
+  } catch (error) {
+    return handler.sendServerError(error); 
   }
-  await commentService.updateCommet(text,commentId);
-  return handler.sendResponse({ commentId});
+  
 }
 
 export async function deleteComment(handler:RequestHandler){
-  const {user} = handler.getBody();
-  const commentId:number = handler.getRequestParameter("id");
-  const comment: any = await commentService.getCommet(commentId);
-  const cmd = constructSingleComment(comment)
-  if(cmd.usetId !== user.id){
-    return handler.sendNotFoundResponse({message:"Invalid User"});
+  try {
+    const { user } = handler.getBody();
+    const commentId: number = handler.getRequestParameter("id");
+    const comment: any = await commentService.getCommet(commentId);
+    const cmd = constructSingleComment(comment)
+    console.log(cmd, " cfdsfdsf", user.id)
+    if (cmd.userId !== user.id) {
+      return handler.sendNotFoundResponse({ message: "Invalid User" });
+    }
+    await commentService.deleteCommet(commentId);
+    return handler.sendResponse({ commentId });
+  } catch (error) {
+    return handler.sendServerError(error);
   }
-  await commentService.deleteCommet(commentId);
-  return handler.sendResponse({commentId});
+  
 }
 
 export async function getComment(handler: RequestHandler) {
-  const commentId:number = handler.getRequestParameter("id");
-  const comment:any = await commentService.getCommet(commentId);
-  return handler.sendResponse(constructSingleComment(comment));
+  try {
+    const commentId: number = handler.getRequestParameter("id");
+    const comment: any = await commentService.getCommet(commentId);
+    return handler.sendResponse(constructSingleComment(comment));
+  } catch (error) {
+    return handler.sendServerError(error);
+  }
+  
 }
 
 export async function getComments(handler: RequestHandler) {
-  const comments:any = await commentService.getCommets();
-  const cmds=[];
-  for(let data of comments){
-    const comment = data._fields[0];
-    const replies: Replies[] = comment.reply_to ? constructRplies(comment.reply_to):[];  
-    cmds.push({ text: comment.text, id: comment._id.low, userId: comment.userId.low, replies: replies})
+  try {
+    const comments: any = await commentService.getCommets();
+    const cmds = [];
+    for (let data of comments) {
+      const comment = data._fields[0];
+      const replies: Replies[] = comment.reply_to ? constructRplies(comment.reply_to) : [];
+      cmds.push({ text: comment.text, id: comment._id.low, userId: comment.userId.low, replies: replies })
+    }
+    return handler.sendResponse(cmds);
+  } catch (error) {
+    return handler.sendServerError(error);
   }
-  return handler.sendResponse(cmds);
+  
 }
 
 function constructRplies(replies: any[]): Replies[]{
@@ -69,5 +95,5 @@ function constructRplies(replies: any[]): Replies[]{
 function constructSingleComment(comment:any[]):any{
   if (!comment[0]) return  null;
   const cmd = comment[0]._fields[0].properties;
-  return { usrId:cmd.userId.low,text:cmd.text}
+  return { userId:cmd.userId,text:cmd.text}
 }

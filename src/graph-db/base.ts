@@ -6,7 +6,7 @@ const { url, username, password } = config.graphDB;
 
 const driver = neo4j.driver(url, neo4j.auth.basic(username, password));
 
-function query(queryString: string, params: object) {
+function query(queryString: string, params?: object) {
     const session = driver.session();
     return new Promise(function (resolve, reject) {
         session
